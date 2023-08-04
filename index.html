@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>YouTube Video Summarizer</title>
+  </head>
+  <body>
+    <h1>YouTube Video Summarizer</h1>
+    <form id="videoSummarizerForm">
+      <label for="video_url">Enter YouTube Video URL:</label>
+      <input type="text" id="video_url" name="video_url" />
+      <label for="max_length">Max Length for Summary:</label>
+      <input type="number" id="max_length" name="max_length" value="100" />
+      <button type="submit">Summarize Video</button>
+    </form>
+
+    <div id="summaryResult">
+      <!-- The summarized video content will be displayed here -->
+    </div>
+
+    <script>
+      document
+        .getElementById("videoSummarizerForm")
+        .addEventListener("submit", function (event) {
+          event.preventDefault();
+          const videoUrl = document.getElementById("video_url").value;
+          const maxLength = parseInt(
+            document.getElementById("max_length").value
+          );
+          const data = { youtube_video_url: videoUrl, max_length: maxLength };
+
+          fetch("/summarize/", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(data),
+          })
+            .then((response) => response.json())
+            .then((result) => {
+              const summaryResult = document.getElementById("summaryResult");
+              summaryResult.innerHTML = `
+                    <h2>Video Title: ${result.video_title}</h2>
+                    <h3>Video Summary:</h3>
+                    <p>${result.video_summary}</p>
+                    <img src="${result.thumbnail_url}" alt="Video Thumbnail">
+                `;
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+              alert("An error occurred while summarizing the video.");
+            });
+        });
+    </script>
+  </body>
+</html>
