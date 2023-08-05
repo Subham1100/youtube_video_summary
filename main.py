@@ -1,11 +1,20 @@
 from pytube import YouTube
 import whisper
 from transformers import pipeline
-from fastapi import FastAPI, HTTPException
-from fastapi.templating import Jinja2Templates
+import time
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+
+app = Flask(__name__)
+CORS(app)
+
+OPENAI_API_KEY = "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"
+
+# Load the Whisper model during application startup and store it in the app context
+model = whisper.load_model("base")
 
 
-def download_and_summarize_youtube_video(youtube_video_url, max_length=100):
+def download_and_summarize_youtube_video(youtube_video_url):
     # Create a YouTube object
     yt = YouTube(youtube_video_url)
 
@@ -22,33 +31,38 @@ def download_and_summarize_youtube_video(youtube_video_url, max_length=100):
         output_path = "audio"
         audio_stream.download(output_path=output_path, filename=video_title_cleaned)
         print("Audio downloaded successfully!")
-
         # Access the downloaded audio file and read its content into a variable
         audio_file_path = f"{output_path}/{video_title_cleaned}"
         with open(audio_file_path, "rb") as file:
             audio_data = file.read()
 
-        # Transcribe the audio to text using Whisper
-        model = whisper.load_model("base")
-        result = model.transcribe("/content/audio/"+video_title_cleaned)
+        # Access the loaded Whisper model from the app context
+        result = model.transcribe(audio_file_path)
         transcript = result["text"]
-        print(transcript)
+        # print(transcript)
 
-        # Summarize the transcript using Hugging Face's pipeline
-        summarizer = pipeline('summarization')
-        summary = summarizer(transcript, max_length=max_length, min_length=30, do_sample=False)
-        video_summary = summary[0]['summary_text']
-
-        return video_title, video_summary, thumbnail_url
+        return video_title, transcript, thumbnail_url
 
     else:
         print("No audio stream found for download.")
         return None, None, None
 
-# Example usage
-youtube_video_url = "https://www.youtube.com/watch?v=N6GyU9PHyQo"
-max_length = 100
-video_title, video_summary, thumbnail_url = download_and_summarize_youtube_video(youtube_video_url, max_length)
-print("Video Title:", video_title)
-print("Video Summary:", video_summary)
-print("Thumbnail URL:", thumbnail_url)
+
+@app.route('/summarize', methods=['POST'])
+def summarize_video():
+    try:
+        youtube_video_url = request.json.get('youtube_video_url')
+        video_title, transcript, thumbnail_url = download_and_summarize_youtube_video(youtube_video_url)
+        response = {
+            'video_title': video_title,
+            'transcript': transcript,
+            'thumbnail_url': thumbnail_url
+        }
+        return jsonify(response)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
+    app.run(host='127.0.0.1', port=5003)
