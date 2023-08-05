@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import "./App.css";
 
-// source ~/myenv/bin/activate
+
 
 function App() {
   const [youtubeUrl, setYoutubeUrl] = useState("");
